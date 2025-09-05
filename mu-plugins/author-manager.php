@@ -1,27 +1,107 @@
 <?php
 
-// class AuthorManager {
-//     function __construct(){
-        
-//     }
-// }
+class AuthorManager {
+    function __construct(){
+        add_action('admin_menu', array($this, 'add_author_admin_page'));
+        function save_author_profile_data() {
+    // Check user permissions
+    if (!current_user_can('edit_posts')) {
+        return;
+    }
 
-// $authorManager = new AuthorManager();
+    // Verify nonce for security
+    if (!isset($_POST['author_profile_nonce']) || !wp_verify_nonce($_POST['author_profile_nonce'], 'author_profile_update')) {
+        return;
+    }
+
+    // Get current user ID
+    $current_user_id = get_current_user_id();
+    $allowed_platforms = array('facebook', 'twitter', 'instagram', 'linkedin', 'youtube');
+
+    // Update standard fields
+    if (isset($_POST['first_name'])) {
+        update_user_meta($current_user_id, 'first_name', sanitize_text_field($_POST['first_name']));
+    }
+    if (isset($_POST['last_name'])) {
+        update_user_meta($current_user_id, 'last_name', sanitize_text_field($_POST['last_name']));
+    }
+    if (isset($_POST['description'])) {
+        update_user_meta($current_user_id, 'description', sanitize_textarea_field($_POST['description']));
+    }
+
+    // Update custom fields
+    if (isset($_POST['author_headline'])) {
+        update_user_meta($current_user_id, 'author_headline', sanitize_text_field($_POST['author_headline']));
+    }
+    $social_links = array();
+    if (!empty($_POST['author_social_links'])) {
+        foreach ($_POST['author_social_links'] as $link) {
+            if (!empty($link['url'])) {
+                $platform = in_array($link['platform'], $allowed_platforms) 
+                            ? $link['platform'] 
+                            : 'website';
+                $social_links[] = array(
+                    'platform' => sanitize_text_field($platform),
+                    'url' => esc_url_raw($link['url'])
+                );
+            }
+        }
+        update_user_meta($current_user_id, 'author_social_links', $social_links);
+    }
+
+    // Handle profile picture upload
+ // ✅ Declare filter function FIRST
+function limit_author_image_sizes($sizes) {
+    return [
+        'author_thumb' => $sizes['author_thumb'] ?? [],
+        'author_pro_pic' => $sizes['author_pro_pic'] ?? [],
+    ];
+}
+
+if (!empty($_FILES['profile_picture']['name'])) {
+    require_once ABSPATH . 'wp-admin/includes/file.php';
+    require_once ABSPATH . 'wp-admin/includes/media.php';
+    require_once ABSPATH . 'wp-admin/includes/image.php';
+
+    // ✅ Add the filter after function is defined
+    add_filter('intermediate_image_sizes_advanced', 'limit_author_image_sizes');
+
+    add_image_size('author_thumb', 48, 48, true);
+    add_image_size('author_pro_pic', 240, 240, true);
+
+    $attachment_id = media_handle_upload('profile_picture', 0);
+
+    if (!is_wp_error($attachment_id)) {
+        update_user_meta($current_user_id, 'profile_picture_id', $attachment_id);
+
+        $fullsize_path = get_attached_file($attachment_id);
+        $metadata = wp_generate_attachment_metadata($attachment_id, $fullsize_path);
+        wp_update_attachment_metadata($attachment_id, $metadata);
+    }
+
+    // ✅ Remove filter after it's used
+    remove_filter('intermediate_image_sizes_advanced', 'limit_author_image_sizes');
+}
 
 
+    // Redirect back to the author profile page
+    wp_safe_redirect(admin_url('admin.php?page=author-profile'));
+    exit;
+}
+add_action('admin_post_save_author_profile', 'save_author_profile_data');
+    }
 
-function add_author_admin_page() {
+    function add_author_admin_page() {
     add_menu_page(
         'Author Profile',
         'Author Profile',
         'edit_posts',
         'author-profile',
-        'author_admin_page_html',
+        array($this, 'author_admin_page_html'),
         'dashicons-admin-users',
         20
     );
 }
-add_action('admin_menu', 'add_author_admin_page');
 
 function author_admin_page_html() {
     // Get current user data
@@ -137,89 +217,8 @@ function author_admin_page_html() {
     <?php
 }
 
-function save_author_profile_data() {
-    // Check user permissions
-    if (!current_user_can('edit_posts')) {
-        return;
-    }
-
-    // Verify nonce for security
-    if (!isset($_POST['author_profile_nonce']) || !wp_verify_nonce($_POST['author_profile_nonce'], 'author_profile_update')) {
-        return;
-    }
-
-    // Get current user ID
-    $current_user_id = get_current_user_id();
-    $allowed_platforms = array('facebook', 'twitter', 'instagram', 'linkedin', 'youtube');
-
-    // Update standard fields
-    if (isset($_POST['first_name'])) {
-        update_user_meta($current_user_id, 'first_name', sanitize_text_field($_POST['first_name']));
-    }
-    if (isset($_POST['last_name'])) {
-        update_user_meta($current_user_id, 'last_name', sanitize_text_field($_POST['last_name']));
-    }
-    if (isset($_POST['description'])) {
-        update_user_meta($current_user_id, 'description', sanitize_textarea_field($_POST['description']));
-    }
-
-    // Update custom fields
-    if (isset($_POST['author_headline'])) {
-        update_user_meta($current_user_id, 'author_headline', sanitize_text_field($_POST['author_headline']));
-    }
-    $social_links = array();
-    if (!empty($_POST['author_social_links'])) {
-        foreach ($_POST['author_social_links'] as $link) {
-            if (!empty($link['url'])) {
-                $platform = in_array($link['platform'], $allowed_platforms) 
-                            ? $link['platform'] 
-                            : 'website';
-                $social_links[] = array(
-                    'platform' => sanitize_text_field($platform),
-                    'url' => esc_url_raw($link['url'])
-                );
-            }
-        }
-        update_user_meta($current_user_id, 'author_social_links', $social_links);
-    }
-
-    // Handle profile picture upload
- // ✅ Declare filter function FIRST
-function limit_author_image_sizes($sizes) {
-    return [
-        'author_thumb' => $sizes['author_thumb'] ?? [],
-        'author_pro_pic' => $sizes['author_pro_pic'] ?? [],
-    ];
 }
 
-if (!empty($_FILES['profile_picture']['name'])) {
-    require_once ABSPATH . 'wp-admin/includes/file.php';
-    require_once ABSPATH . 'wp-admin/includes/media.php';
-    require_once ABSPATH . 'wp-admin/includes/image.php';
-
-    // ✅ Add the filter after function is defined
-    add_filter('intermediate_image_sizes_advanced', 'limit_author_image_sizes');
-
-    add_image_size('author_thumb', 48, 48, true);
-    add_image_size('author_pro_pic', 240, 240, true);
-
-    $attachment_id = media_handle_upload('profile_picture', 0);
-
-    if (!is_wp_error($attachment_id)) {
-        update_user_meta($current_user_id, 'profile_picture_id', $attachment_id);
-
-        $fullsize_path = get_attached_file($attachment_id);
-        $metadata = wp_generate_attachment_metadata($attachment_id, $fullsize_path);
-        wp_update_attachment_metadata($attachment_id, $metadata);
-    }
-
-    // ✅ Remove filter after it's used
-    remove_filter('intermediate_image_sizes_advanced', 'limit_author_image_sizes');
-}
+$authorManager = new AuthorManager();
 
 
-    // Redirect back to the author profile page
-    wp_safe_redirect(admin_url('admin.php?page=author-profile'));
-    exit;
-}
-add_action('admin_post_save_author_profile', 'save_author_profile_data');
