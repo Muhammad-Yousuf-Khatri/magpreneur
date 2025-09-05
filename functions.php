@@ -254,12 +254,41 @@ function is_bot() {
     return false;
 }
 
-add_filter('get_avatar_url', 'use_custom_author_avatar', 10, 3);
+// add_filter('get_avatar_url', 'use_custom_author_avatar', 10, 3);
 
+// function use_custom_author_avatar($url, $id_or_email, $args) {
+//     $user = false;
+
+//     // Get user object from various possible inputs
+//     if (is_numeric($id_or_email)) {
+//         $user = get_user_by('id', (int) $id_or_email);
+//     } elseif (is_object($id_or_email) && !empty($id_or_email->user_id)) {
+//         $user = get_user_by('id', (int) $id_or_email->user_id);
+//     } elseif (is_string($id_or_email)) {
+//         $user = get_user_by('email', $id_or_email);
+//     }
+
+//     if ($user) {
+//         $custom_avatar_id = get_user_meta($user->ID, 'profile_picture_id', true);
+
+//         if ($custom_avatar_id) {
+//             $custom_avatar_url = wp_get_attachment_image_url($custom_avatar_id, 'author_pro_pic'); // use correct size
+//             if ($custom_avatar_url) {
+//                 return $custom_avatar_url;
+//             }
+//         }
+//     }
+
+//     return $url; // Fallback to default (Gravatar or Mystery Person)
+// }
+
+// Here is Update Version
+
+add_filter('get_avatar_url', 'use_custom_author_avatar', 10, 3);
 function use_custom_author_avatar($url, $id_or_email, $args) {
     $user = false;
 
-    // Get user object from various possible inputs
+    // Get user object from possible inputs
     if (is_numeric($id_or_email)) {
         $user = get_user_by('id', (int) $id_or_email);
     } elseif (is_object($id_or_email) && !empty($id_or_email->user_id)) {
@@ -272,27 +301,55 @@ function use_custom_author_avatar($url, $id_or_email, $args) {
         $custom_avatar_id = get_user_meta($user->ID, 'profile_picture_id', true);
 
         if ($custom_avatar_id) {
-            $custom_avatar_url = wp_get_attachment_image_url($custom_avatar_id, 'author_pro_pic'); // use correct size
+            // ✅ Respect requested avatar size
+            $requested_size = !empty($args['size']) ? (int) $args['size'] : 96;
+
+            $custom_avatar_url = wp_get_attachment_image_url($custom_avatar_id, [ $requested_size, $requested_size ]);
+
             if ($custom_avatar_url) {
                 return $custom_avatar_url;
             }
         }
     }
 
-    return $url; // Fallback to default (Gravatar or Mystery Person)
+    return $url; // fallback to Gravatar / default
 }
 
-add_filter('get_avatar', 'replace_avatar_img_tag', 10, 5);
-function replace_avatar_img_tag($avatar, $id_or_email, $size, $default, $alt) {
+
+// add_filter('get_avatar', 'replace_avatar_img_tag', 10, 5);
+// function replace_avatar_img_tag($avatar, $id_or_email, $size, $default, $alt) {
+//     $custom_url = apply_filters('get_avatar_url', '', $id_or_email, ['size' => $size]);
+
+//     if (!empty($custom_url)) {
+//         $alt_text = esc_attr($alt ?: 'User Avatar');
+//         return "<img src='" . esc_url($custom_url) . "' alt='{$alt_text}' class='avatar avatar-{$size} photo' height='{$size}' width='{$size}' />";
+//     }
+
+//     return $avatar;
+// }
+
+
+// Here is updated version
+add_filter('get_avatar', 'replace_avatar_img_tag', 10, 6);
+function replace_avatar_img_tag($avatar, $id_or_email, $size, $default, $alt, $args) {
     $custom_url = apply_filters('get_avatar_url', '', $id_or_email, ['size' => $size]);
 
     if (!empty($custom_url)) {
-        $alt_text = esc_attr($alt ?: 'User Avatar');
-        return "<img src='" . esc_url($custom_url) . "' alt='{$alt_text}' class='avatar avatar-{$size} photo' height='{$size}' width='{$size}' />";
+        $alt_text   = esc_attr($alt ?: 'User Avatar');
+
+        // Merge default class + any custom class passed in $args
+        $class_attr = 'avatar avatar-' . $size . ' photo';
+        if ( !empty($args['class']) ) {
+            $class_attr .= ' ' . esc_attr( $args['class'] );
+        }
+
+        return "<img src='" . esc_url($custom_url) . "' alt='{$alt_text}' class='{$class_attr}' height='{$size}' width='{$size}' />";
     }
 
     return $avatar;
 }
+
+
 
 function get_author_thumb_url($author_id = null){
     if(!$author_id){
@@ -312,3 +369,8 @@ function noSubsAdminBar(){
     }
 }
 
+function mytheme_comment_li_classes( $classes ) {
+    $classes[] = 'list-group-item py-3 border-bottom'; // add your own classes
+    return $classes;
+}
+add_filter( 'comment_class', 'mytheme_comment_li_classes' );

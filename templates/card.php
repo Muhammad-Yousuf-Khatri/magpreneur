@@ -1,7 +1,6 @@
 <?php 
 $this_post_cat = get_the_category();
 $featured_pic_id = get_post_thumbnail_id(get_the_ID());
-$author_thumb_url = get_author_thumb_url();
 ?>
 
 <div class="col-lg-4 col-sm-6">
@@ -27,8 +26,8 @@ $author_thumb_url = get_author_thumb_url();
           <a href="<?php echo esc_url(get_category_link($this_post_cat[0]->term_id)); ?>">
               <?php echo esc_html($this_post_cat[0]->name); ?>
           </a>
-      </small>
-      <?php }
+          </small>
+        <?php }
         ?>
         <h5 class="card-title"><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h5>
         <p class="card-text"><?php if(has_excerpt()){

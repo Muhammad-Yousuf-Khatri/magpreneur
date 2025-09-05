@@ -3,41 +3,82 @@ if ( post_password_required() ) {
     return;
 }
 ?>
-
-<div id="comments" class="d-flex justify-content-center comments-area border-top py-5">
+<div class="d-flex justify-content-center border-top py-5 row">
+<div id="comments" class="comments-area col col-sm-8">
 
     <?php if ( have_comments() ) : ?>
-        <h2 class="comments-title">
+        <h5 class="comments-title border-bottom pb-2">
             <?php
             printf(
                 _nx( 'One Comment', '%1$s Comments', get_comments_number(), 'comments title' ),
                 number_format_i18n( get_comments_number() )
             );
             ?>
-        </h2>
+        </h5>
 
-        <ol class="comment-list">
-            <?php wp_list_comments( array( 'style' => 'ol', 'short_ping' => true ) ); ?>
-        </ol>
-
-        <?php the_comments_navigation(); ?>
-
-    <?php endif; ?>
-
+        <ol class="comment-list list-unstyled">
     <?php
+    
+    wp_list_comments( array(
+        'style'       => 'ol',
+        'short_ping'  => true,
+        'avatar_size' => 48, // small avatar
+        'callback'    => function($comment, $args, $depth) {
+            ?>
+            <li <?php comment_class( 'mb-3' ); ?> id="comment-<?php comment_ID(); ?>">
+                <div class="d-flex">
+                    <div class="me-3">
+                        <?php echo get_avatar( 
+                            $comment, 
+                            $args['avatar_size'], 
+                            '',
+                            '',
+                            array('class' => 'rounded-circle')
+                        ); ?>
+                    </div>
+                    <div>
+                        <div class="comment-meta">
+                            <strong><?php comment_author(); ?></strong>
+                            <span class="text-muted small"><?php comment_date(); ?></span>
+                        </div>
+                        <div class="comment-text">
+                            <?php comment_text(); ?>
+                        </div>
+                    </div>
+                </div>
+            </li>
+            <?php
+        }
+    ) );
+    ?>
+</ol>
+
+            
+        <?php the_comments_navigation();
+        
+    endif;
+
+
     // If comments are closed but there are comments, show a message
     if ( ! comments_open() && get_comments_number() ) :
     ?>
         <p class="no-comments"><?php esc_html_e( 'Comments are closed.' ); ?></p>
-    <?php endif; ?>
+    <?php endif;
 
-    <?php
 $comments_args = array(
-    'class_form'   => 'comment-form', // Form wrapper class
-    'class_submit' => 'btn-subscribe py-1 mt-3', // Submit button classes
+    'class_form'   => 'comment-form',
+    'class_submit' => 'btn-subscribe py-1 mt-3',
     'label_submit' => 'Post Comment',
+    'must_log_in' => '
+        <p class="alert bg-light border p-3 rounded">
+            You must 
+            <a href="' . wp_login_url(get_permalink()) . '" class="btn btn-dark-to-light mx-1">Login</a> 
+            or 
+            <a href="' . wp_registration_url() . '" class="btn btn-subscribe mx-1">Register</a> 
+            to post a comment.
+        </p>
+    ',
 
-    // Comment textarea
     'comment_field' => '
         <div class="mb-3">
             <label for="comment" class="form-label">Comment</label>
@@ -45,7 +86,6 @@ $comments_args = array(
         </div>
     ',
 
-    // Other fields
     'fields' => array(
         'author' =>
             '<div class="mb-3">
@@ -64,13 +104,25 @@ $comments_args = array(
             </div>',
     ),
 
-    // Remove default notes
     'comment_notes_before' => '',
-    'comment_notes_after'  => '',
+    'comment_notes_after'  => ''
 );
 
-comment_form($comments_args);
+if(is_user_logged_in()){
+    comment_form($comments_args);   
+} else { ?>
+    <div>
+    <p class="alert bg-light border p-3 rounded">
+        You must 
+        <a href="' . wp_login_url(get_permalink()) . '" class="btn btn-dark-to-light mx-1">Login</a> 
+        or 
+        <a href="' . wp_registration_url() . '" class="btn btn-subscribe mx-1">Register</a> 
+        to post a comment.
+    </p>
+    </div>
+<?php }
 ?>
 
 
+</div>
 </div>

@@ -3,6 +3,7 @@ get_header();
 
 while (have_posts()) {
     the_post();
+    $wordCount = str_word_count(strip_tags(get_the_content()));
     set_post_views(get_the_ID()); 
               $content = apply_filters('the_content', get_the_content());
               libxml_use_internal_errors(true);
@@ -39,7 +40,7 @@ while (have_posts()) {
             </a>
           </div>
           <div class="col d-flex justify-content-center">
-            <span>Read time</span>
+            <span><?php echo round($wordCount/255); ?> min read</span>
           </div>
           <div class="col d-flex justify-content-center">
             <time class="card--meta__time"><?php the_time('j-M-y');?></time>
@@ -173,9 +174,12 @@ while (have_posts()) {
 wp_reset_postdata();
 
 // Display comments template if comments are open or at least one comment exists
+
 if ( comments_open() || get_comments_number() ) {
     comments_template();
 }
+
+
 
 get_footer();
 ?>
